@@ -43,6 +43,8 @@ DEVEL=${DEVEL:=false}
 # flavor based on OSD type proporgated by ceph-build
 OSD_FLAVOR=${OSD_FLAVOR:=default}
 
+EXTRA_PUSH_ARGS=""
+
 if [ -z "$CEPH_RELEASES" ]; then
   # NEVER change 'master' position in the array, this will break the 'latest' tag
   CEPH_RELEASES=(master nautilus octopus pacific)
@@ -115,6 +117,8 @@ function install_podman {
     if [[ -f /etc/containers/registries.conf.rpmsave ]]; then
       sudo mv /etc/containers/registries.conf.rpmsave /etc/containers/registries.conf
     fi
+    # podman sometimes pushes old-format images. No one knows why. Force v2s2.
+    EXTRA_PUSH_ARGS="--format v2s2"
   fi
 }
 
@@ -295,19 +299,19 @@ function push_ceph_imgs_latest {
       if [[ "${HOST_ARCH}" == "x86_64" ]]; then
         sha1_flavor_repo_tag=${CONTAINER_REPO_HOSTNAME}/${CONTAINER_REPO_ORGANIZATION}/ceph:${SHA1}-${OSD_FLAVOR}
         docker tag "$local_tag" "$sha1_flavor_repo_tag"
-        docker push "$sha1_flavor_repo_tag"
+        docker push ${EXTRA_PUSH_ARGS} "$sha1_flavor_repo_tag"
       fi
     elif [[ "${distro_release}" == "7" ]]; then
       docker tag "$local_tag" "$full_repo_tag"
-      docker push "$full_repo_tag"
+      docker push ${EXTRA_PUSH_ARGS} "$full_repo_tag"
     else
       docker tag "$local_tag" "$full_repo_tag"
-      docker push "$full_repo_tag"
+      docker push ${EXTRA_PUSH_ARGS} "$full_repo_tag"
       if [[ "${HOST_ARCH}" == "x86_64" ]] ; then
         docker tag "$local_tag" "$branch_repo_tag"
         docker tag "$local_tag" "$sha1_repo_tag"
-        docker push "$branch_repo_tag"
-        docker push "$sha1_repo_tag"
+        docker push ${EXTRA_PUSH_ARGS} "$branch_repo_tag"
+        docker push ${EXTRA_PUSH_ARGS} "$sha1_repo_tag"
       fi
     fi
     return
